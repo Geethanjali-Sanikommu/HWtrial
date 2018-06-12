@@ -1,0 +1,59 @@
+Package dotparse;
+
+Helpers
+lowercase = ['a' .. 'z'];
+uppercase = ['A' .. 'Z'];
+digit = ['0' .. '9'];
+quote = '"';
+all = [0 .. 127];
+not_quote = [all-quote];
+tab = 9;
+cr = 13;
+lf = 10;
+
+Tokens
+digraph = 'digraph';
+node = 'node';
+lbrace = '{';
+rbrace = '}';
+lbracket = '[';
+rbracket = ']';
+id = lowercase(lowercase|digit|'_')* | uppercase(uppercase|digit|'_')*;
+assignment = '=';
+comma = ',';
+semicoln = ';';
+arrow = '->';
+number = digit+;
+string = quote(not_quote)* quote;
+whitespace = (' ')* | tab;
+eol = cr|lf|cr lf;
+
+Ignored Tokens
+whitespace,eol;
+
+Productions
+root {-> root} = {digraph} digraph id lbrace line rbrace {-> New root.digraph(digraph, id, line.line)};
+line {-> line} = {lines} [left]:id arrow [right]:id semicoln line {-> New line.lines(left, arrow, right, line.line)} |
+				{arrow} [left]:id arrow [right]:id text semicoln line {-> New line.arrow(left, arrow, right, text.text, line.line)} |
+				{text} id text semicoln line {-> New line.text(id, text.text, line.line)} | 
+				{node} node text semicoln line {-> New line.node(node, text.text, line.line)} |
+				{empty};
+text {-> text} = {ids} id text {-> New text.ids(id, text.text)} | 
+		{list} list {-> New text.list(list.list)};
+list {-> list} = {element} lbracket elements rbracket {-> New list.element(elements.elements)};
+elements {-> elements} = {ele} ele {-> New elements.ele(ele.ele)} | 
+			{comma} ele comma elements {-> New elements.comma(ele.ele, comma, elements.elements)};
+ele {-> ele} = {assignment} [left]:id assignment [right]:id {-> New ele.assignment(left, assignment, right)} | 
+			{string} id assignment string {-> New ele.string(id, assignment, string)} | 
+			{number} id assignment number {-> New ele.number(id, assignment, number)};
+			
+Abstract Syntax Tree
+root = {digraph} digraph id line;
+line = {lines} [left]:id arrow [right]:id line |
+		{arrow} [left]:id arrow [right]:id text line | 
+		{text} id text line | 
+		{node} node text line | {empty} ;
+text = {ids} id text | {list} list;
+list = {element} elements;
+elements = {ele} ele | {comma} ele comma elements;
+ele = {assignment} [left]:id assignment [right]:id | {string} id assignment string | {number} id assignment number; 
